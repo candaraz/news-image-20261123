@@ -1,26 +1,26 @@
-#!/usr/bin/env python3
-"""Copy the committed front page to the grader's output directory.
+"""news-image-20261123 entry (Python 3, standard library only).
 
-Standard library only, so it runs in the grader's fresh container with no
-network and nothing installed. The image (entry.png, beside this file) was
-drawn by render.py, a local Pillow script kept out of this snapshot; this
-program only copies its bytes, so both grader runs write identical output.
+Copies the entry image beside this file to /output/entry.png.
+Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
+    mkdir -p out && MAKEFUN_OUTPUT_DIR=out python3 main.py
 """
 
 import os
-import shutil
+from pathlib import Path
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-OUT_DIR = os.environ.get("MAKEFUN_OUTPUT_DIR") or "/output"
+HERE = Path(__file__).resolve().parent
+OUT_DIR = Path(os.environ.get("MAKEFUN_OUTPUT_DIR", "/output"))
+SRC = HERE / "entry.png"
+DST = OUT_DIR / "entry.png"
 
+# Refuse to hand over a file that is not a whole PNG.
+data = SRC.read_bytes()
+if len(data) < 8 or data[:8] != b"\x89PNG\r\n\x1a\n":
+    raise SystemExit("entry.png is not a PNG file")
 
-def main():
-    os.makedirs(OUT_DIR, exist_ok=True)
-    src = os.path.join(HERE, "entry.png")
-    dst = os.path.join(OUT_DIR, "entry.png")
-    shutil.copyfile(src, dst)
-    print("wrote %s" % dst)
+OUT_DIR.mkdir(parents=True, exist_ok=True)
+DST.write_bytes(data)
 
-
-if __name__ == "__main__":
-    main()
+# Read the copy back and fail loudly if it is not byte-for-byte identical.
+if DST.read_bytes() != data:
+    raise SystemExit("output entry.png does not match the source")
